@@ -1,52 +1,66 @@
+import ast
+import inspect
+import textwrap
 from typing import Any, Callable
-from functools import wraps
+
 import registry
 
 
-def mixin(mixin_cls: str) -> Callable[..., Any]:
-    def decorator(cls):
-        print(mixin_cls)
-        registry.MIXIN_REGISTRY.update({mixin_cls: cls.__name__})
-        cls.__is_mixin_class__ = True
-        cls.__mixin_defined_on__ = cls
-        return cls
+def mixin(target, priority=0, condition=None) -> Callable[..., Any]:
+    def decorator(_cls):
+        def __init_subclass__(_cls, **kwargs):
+            raise TypeError(f"Mixin class {_cls.__name__} cannot be subclassed")
+
+        def __new__(_cls, *args, **kwargs):
+            raise TypeError(f"Mixin class {_cls.__name__} cannot be instantiated")
+
+        _cls.__init_subclass__ = classmethod(__init_subclass__)
+        _cls.__new__ = classmethod(__new__)
+
+        module, class_name = target.rsplit('.', 1)
+        for name, func in _cls.__dict__.items():
+            if hasattr(func, "_mixin_injection"):
+                recode = func._mixin_injection
+                recode["method"] = recode.get("method", name)
+                recode["priority"] = priority
+                recode["condition"] = condition
+                registry.register_mixin(module, class_name, recode)
+        return _cls
 
     return decorator
 
 
-def inject(func: Callable[..., Any]) -> Callable[..., Any]:
-    @wraps(func)
-    def decorator(self, *args, **kwargs):
-        if not self:
-            raise RuntimeError(f"{func.__name__} is not an instance method")
+def inject(method, at="HEAD", priority=0, condition=None) -> Callable[..., Any]:
+    def wrapper(_func):
+        source = inspect.getsource(_func)
+        dedent = textwrap.dedent(source)
+        tree = ast.parse(dedent)
+        code_content = ""
+        for node in ast.walk(tree):
+            if isinstance(node, ast.FunctionDef):
+                code_content = "\n".join(ast.unparse(stmt) for stmt in node.body)
+                break
+        print(code_content)
+        recode = {"type": "inject", "method": method, "at": at, "code": code_content, "priority": priority,
+                  "condition": condition}
+        _func._mixin_injection = recode
+        return _func
 
-        cls = self.__class__
-
-        if getattr(cls, "__is_mixin_class__", False) and getattr(cls, "__mixin_defined_on__", None) is cls:
-            print(cls.__name__, func.__name__)
-        else:
-            raise Exception(f"MixinApplyError: {cls.__name__}.{func.__name__} is not declared on a @mixin class")
-        return func(self, *args, **kwargs)
-
-    return decorator
+    return wrapper
 
 
 if __name__ == "__main__":
-    @mixin(mixin_cls="TestClass")
-    class TestMixin:
-        @inject
+    @mixin(target="test.TestClass")
+    class TestMixinClass:
+        @inject(method="TestMethod", at="TestAt", condition="TestCondition")
         def test_func(self):
-            pass
+            test_str = "TEST"
 
+            def logic():
+                print(test_str)
 
-    class TC2(TestMixin):
-        @inject
-        def test_func(self):
-            pass
+            logic()
 
 
     print(registry.MIXIN_REGISTRY)
-    tc = TestMixin()
-    # tc2 = TC2()
-    tc.test_func()
-    # tc2.test_func()
+    print(TestMixinClass.test_func._mixin_injection)

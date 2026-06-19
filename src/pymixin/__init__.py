@@ -2,9 +2,8 @@
 pymixin — Python Mixin Framework
 """
 
-import core, registry, mixin
+import core
+import mixin
+import registry
 
-__all__ = ["core", "registry.py", "mixin"]
-__version__ = "0.0.1-alpha"
-__author__ = "LZH"
-__url__ = "github.com/LZH-sqrt2/pymixin"
+__all__ = ["core", "registry", "mixin"]

@@ -1,0 +1,4 @@
+[project]
+name = "mixin4py"
+version = "0.0.1alpha"
+authors = [{name = "LZH"}]
