@@ -20,11 +20,11 @@ def mixin(target, priority=0, condition=None) -> Callable[..., Any]:
         module, class_name = target.rsplit('.', 1)
         for name, func in _cls.__dict__.items():
             if hasattr(func, "_mixin_injection"):
-                recode = func._mixin_injection
-                recode["method"] = recode.get("method", name)
-                recode["priority"] = priority
-                recode["condition"] = condition
-                registry.register_mixin(module, class_name, recode)
+                operation = func._mixin_injection
+                operation["method"] = operation.get("method", name)
+                operation["priority"] = priority
+                operation["condition"] = condition
+                registry.register_mixin(module, class_name, operation)
         return _cls
 
     return decorator
@@ -41,7 +41,7 @@ def inject(method, at="HEAD", priority=0, condition=None) -> Callable[..., Any]:
                 code_content = "\n".join(ast.unparse(stmt) for stmt in node.body)
                 break
         print(code_content)
-        recode = {"type": "inject", "method": method, "at": at, "code": code_content, "priority": priority,
+        operation = {"type": "inject", "method": method, "at": at, "code": code_content, "priority": priority,
                   "condition": condition}
         _func._mixin_injection = recode
         return _func
