@@ -1,8 +1,9 @@
 import ast
+import importlib.abc
 import sys
 
-_APPLIED = False
 _AUTO_APPLY_ENABLED = True
+_HOOK_INSTALLED = False
 
 
 class InjectionTransformer(ast.NodeTransformer):
@@ -13,17 +14,31 @@ class InjectionTransformer(ast.NodeTransformer):
         self.current_class = None
 
 
+class MixinHook:
+    def __init__(self):
+        self.mixin_loader = self.MixinLoader()
+        self.mixin_finder = self.MixinFinder()
+
+    class MixinLoader(importlib.abc.Loader):
+        def __init__(self):
+            pass
+            # self.namespace = namespace
+            # self._origin_loader = namespace.loader
+
+        def exec_module(self):
+            pass
+
+    class MixinFinder(importlib.abc.Loader):
+        def __init__(self):
+            pass
+
+
 def disable_auto_apply():
     global _AUTO_APPLY_ENABLED
     _AUTO_APPLY_ENABLED = False
 
 
 def apply_mixins():
-    global _APPLIED
-    if _APPLIED:
-        return
-    _APPLIED = True
-
     frame = sys._getframe()
     global_namespace = frame.f_globals
 
